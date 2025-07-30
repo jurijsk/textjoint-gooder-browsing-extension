@@ -1,6 +1,6 @@
 {
   "name": "Textjoint Gooder Browsing Extension",
-  "description": "Various browser goodies",
+  "description": "Various browsing goodies",
   "private": true,
   "version": "0.0.0",
   "type": "module",
