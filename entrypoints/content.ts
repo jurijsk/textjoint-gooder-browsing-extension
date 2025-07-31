@@ -1,14 +1,26 @@
+
+//customElements is not accesible to content scripts unless polyfilled.
+//import '@webcomponents/custom-elements';
+
 export default defineContentScript({
 	matches: ['*://*/*'],
+	world: 'MAIN',
 	main() {
 		console.log('Hello content.');
+
+		class FragmentLinkMarker extends HTMLAnchorElement {
+			constructor() {
+				super();
+			}
+		}
 
 		// Inject CSS styles for anchor markers
 		const style = document.createElement('style');
 		style.textContent = `
-			.tj-anchor-marker {
+			.tj-fragment-anchor-marker {
 				color: #14ad14 !important;
 				font-size: 0.8em !important;
+				margin: 0px !important;
 				margin-right: 2px !important;
 				font-family: monospace !important;
 				cursor: pointer !important;
@@ -33,16 +45,12 @@ export default defineContentScript({
 				word-spacing: normal !important;
 				text-decoration: none !important;
 			}
-			.tj-anchor-marker:hover {
-				text-decoration: underline !important;
-			}
 		`;
 		document.head.appendChild(style);
 
-		// Function to style same-page anchor links
 		function styleSamePageAnchorLinks() {
 			const pageUrl = window.location.origin + window.location.pathname;
-			const anchorLinks = document.querySelectorAll('a[href]');
+			const anchorLinks = document.querySelectorAll('a[href*="#"]');
 
 			for(let i = 0;i < anchorLinks.length;i++) {
 				const linkElement = anchorLinks[i] as HTMLAnchorElement;
@@ -84,25 +92,36 @@ export default defineContentScript({
 				}
 
 				// Only add helper if all conditions are met and helper doesn't already exist
-				if(!linkElement.firstElementChild?.hasAttribute('tj-anchor-marker')) {
+				if(!linkElement.firstElementChild?.hasAttribute('tj-fragment-anchor-marker')) {
 					// Create a simple anchor helper element with strong style protection
-					const anchorMarker = document.createElement('a');
-					anchorMarker.href = linkElement.hash;
+					const anchorMarker = document.createElement('tj-fragment-anchor');
+					//anchorMarker.href = linkElement.hash;
 					anchorMarker.textContent = '#';
-					anchorMarker.className = 'tj-anchor-marker';
-					anchorMarker.setAttribute('tj-anchor-marker', '');
+					anchorMarker.className = 'tj-fragment-anchor-marker';
+					anchorMarker.setAttribute('tj-fragment-anchor-marker', '');
 					anchorMarker.title = `Anchor link, it link to another place on this page.`;
 
-					//consider popover here
-
 					linkElement.insertBefore(anchorMarker, linkElement.firstChild);
+
 				}
-
-
 			}
 		}
-		// Apply styling initially
-		styleSamePageAnchorLinks();
 
+		//review this
+		function initializeWhenReady() {
+			if(!window.customElements.get('tj-fragment-anchor')) {
+				customElements.define('tj-fragment-anchor', FragmentLinkMarker, { extends: 'a' });
+			} else {
+				console.log("can not register custom element");
+			}
+			styleSamePageAnchorLinks();
+		}
+
+		//review this
+		document.onreadystatechange = () => {
+			if(document.readyState === "complete") {
+				initializeWhenReady();
+			}
+		};
 	},
 });
